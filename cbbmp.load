@@ -1,0 +1,121 @@
+####GENERALIZE FUNCTION TO ALL YEARS
+
+cbbmp.load<-function(years=1995:2012,filepath=getwd()){ 
+  
+##error out if the years are beyond the possible range of datasets  
+if (min(years) < 1995) {stop("data not available before 1995")}
+if (max(years) >= as.numeric(format(Sys.Date(), "%Y"))) 
+  {stop("data for the current or future years are not available")}
+
+##require dplyr before anything
+if (!"pacman" %in% dir(.libPaths())) {install.packages("pacman")}
+pacman::p_load(dplyr)
+
+## allows for alternate file destination  
+env<-getwd()
+setwd(filepath)
+
+
+base.url <- "http://www.baybenthos.versar.com/SciData/"
+
+table.ext<- c("bm.txt","sed.txt","wq.txt")
+
+region<-c("mdbe","vabe")
+
+year.url<-paste0("CBPData",years)
+
+region.year<-c(paste0(region[[1]],substr(years,start=3,stop=4)),
+               paste0(region[[2]],substr(years,start=3,stop=4)))
+
+url.main<-paste0(base.url,year.url,"/",region.year,"_")
+
+full.url <-c(paste0(url.main,table.ext[[1]]),
+  paste0(url.main,table.ext[[2]]),
+  paste0(url.main,table.ext[[3]]))
+
+filepath <-c(paste0(region.year,"_",table.ext[[1]]),
+  paste0(region.year,"_",table.ext[[2]]),
+  paste0(region.year,"_",table.ext[[3]]))
+
+for (i in 1:length(full.url)){
+download.file(full.url[i],destfile=filepath[i],mode="wb")
+}
+  
+  
+#note there are (year * region) datasets per type, and 3 types
+years<-1995:2012  
+gap.y<-(length(years))*2  
+gap.z<-(length(years))*2*2
+ 
+options(stringsAsFactors=FALSE)
+
+v.m<-list()
+  
+for(i in 1:length(years)){  
+  
+x<-read.csv(filepath[i],row.names=NULL)
+colnames(x)<-colnames(x)[-1]
+x<-x[-length(x)]
+x$LKUP<-paste(x$STATION,x$YEARCODE,x$SAMPLE_NUMBER)
+
+##converting missing value notation to NA and VALUE to numeric
+##not necessary for bm datasets, but is for wq and sed
+x$VALUE<-as.numeric(gsub(pattern = "       .    ",
+  replacement = NA, fixed=TRUE,x = x$VALUE))
+
+##y is the sediment characteristic data
+y<-read.csv(filepath[i+gap.y],row.names=NULL)
+
+#remove 'row.names' and shift over one column
+colnames(y)<-colnames(y)[-1]
+
+#remove superfluous column of NA values
+y<-y[-length(y)]
+
+#mismatch of headers in wq and sed datatset -- use "SAMPTYPE" without '_'
+colnames(y)[length(y)]<-"SAMP_TYPE"
+
+#create unique lookup column; just for potential future use
+#not necessary with left_join
+y$LKUP<-paste(y$STATION,y$YEARCODE,y$SAMPLE_NUMBER)
+
+##value is character -- includes missing values as '.'
+y$VALUE<-as.numeric(gsub(pattern = "       .    ",
+  replacement = NA, fixed=TRUE,x = y$VALUE))
+
+##Joining x with y
+m.2<-left_join(x=x,y=y,by=NULL)
+
+##z is the water quality data
+z<-read.csv(filepath[i+gap.z],row.names=NULL)
+colnames(z)<-colnames(z)[-1]
+z<-z[-length(z)]
+colnames(z)[length(z)]<-"SAMP_TYPE"
+z$LKUP<-paste(z$STATION,z$YEARCODE,z$SAMPLE_NUMBER)
+z$VALUE<-as.numeric(gsub(pattern = "[^.$]",
+  replacement = NA, fixed=TRUE,x = z$VALUE))
+
+##Joining xy with z
+m.3<-left_join(x=m.2,y=z,by=NULL)
+
+v.m[i]<-m.3
+}
+
+##combine all years into single dataset  
+cbbmp<-do.call(rbind,v.m)  
+
+##optional return wd to original (if changed for purpose of saving files)  
+setwd(env)
+  
+##output is dataset  
+return(cbbmp)
+  }
+
+setwd("C:/Users/Libby Russell/Desktop")
+cbbmp.load(years=1995)
+
+########Current issue
+
+#"Error in file(file, "rt") : cannot open the connection 
+#In addition: Warning message:
+#In file(file, "rt") : cannot open file 'NA': No such file or directory"
