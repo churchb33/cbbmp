@@ -1,6 +1,30 @@
-library(plyr)
-  
-  cbbmp.load<-function(years=1995:2012,filepath=getwd(),save=FALSE){ 
+#' Download data from Chesapeake Bay Benthic Monitoring Program
+#' 
+#' This function takes a range of years (from 1995 through newest available year -- see URL below for
+#' currently available year) and returns a data.frame of biomass, sediment quality, and water quality
+#' parameters from both the Maryland and Virginia datasets from the range of years.
+#' 
+#'  
+#' @param years The range of years of sampling data to download; minimum = 1995, maximum is updated annually, but current maximum = 2013
+#' 
+#' @param path An alternative repository for data files downloaded by cbbmp.load; default repository is the working directory; new file path does not alter working directory
+#' 
+#' @param save Logical option to save Rdata file of downloaded data for future reference; default setting will save a file called 'cbbmp.Rdata' to the specified file path or, by default, the working directory
+#' 
+#' @return data.frame
+#' 
+#' @import plyr, reshape2, magrittr
+#' 
+#' @seealso \url{http://www.baybenthos.versar.com/data.htm}
+#' 
+#' @section Warning:
+#' It is strongly recommended that, if you do not set save=TRUE, that you create an R object from the output of the function. Successive executions of the function will cause the data to download on each execution.
+#' The full dataset can be quite large, so relying on compressed Rdata file is recommended rather than writing to other formats (e.g., .csv, .xlsx).
+#' Loading the data causes consistent warnings that NAs are produced. This is to be expected. The NA values are caused by slight inconsistencies in data columns between years.
+#' 
+#' @export
+
+cbbmp.load<-function(years, path=getwd(), save=TRUE){ 
   
   ##error out if the years are beyond the possible range of datasets
   
@@ -11,16 +35,16 @@ library(plyr)
 
   ## allows for alternate file destination  
 
-  env <- getwd()
+  directory <- getwd()
 
-  setwd(filepath)
-
+  setwd(path)
 
   base.url <- "http://www.baybenthos.versar.com/SciData/"
 
   table.ext <- c("bm.txt", "sed.txt", "wq.txt")
 
-  region <- c("mdbe", "vabe")
+  region <- c("mdbe", "vabe") 
+ 
 
   year.url <- paste0("CBPData", years)
 
@@ -38,7 +62,7 @@ library(plyr)
     paste0(region.year,"_",table.ext[[3]]))
 
 
-
+    
   for (i in 1:length(full.url)) {
     download.file(full.url[i], destfile = filepath[i], mode="wb")
   }
@@ -58,7 +82,7 @@ library(plyr)
   
     #x is the biomass data for maryland
     x <- read.csv(filepath[i], row.names= NULL)
-  
+ 
     colnames(x) <- colnames(x)[-1]
   
     x <- x[-length(x)]
@@ -70,7 +94,14 @@ library(plyr)
     x$VALUE <- as.numeric(gsub(pattern= "       .    ",
       replacement= NA, fixed= TRUE, x= x$VALUE))
     x$REGION <- "Maryland"
+  
     
+    x <- x %>% dplyr::filter(LBL == "Macoma balthica") 
+    
+    x <- reshape2::dcast(x, 
+    formula = REGION + YEARCODE+ STATION + SAMPLE_NUMBER ~ PARAMETER + UNITS, 
+    fun.aggregate= mean, na.rm= TRUE,
+    value.var= "VALUE")
   
     ##y is the sediment characteristic data for maryland
     y <- read.csv(as.character(filepath[i + gap.y]), row.names=NULL)
@@ -88,6 +119,12 @@ library(plyr)
       replacement= NA, fixed= TRUE, x= y$VALUE))
     y$REGION <- "Maryland"
 
+        
+    y <- reshape2::dcast(y, 
+      formula = LKUP ~ PARAMETER + UNITS, 
+      fun.aggregate=mean, na.rm=TRUE,
+      value.var= "VALUE")
+    
 
     ##z is the water quality data for maryland
     z <- read.csv(filepath[i + gap.z], row.names= NULL)
@@ -98,9 +135,14 @@ library(plyr)
     z$VALUE <- as.numeric(z$VALUE)
     z$REGION <- "Maryland"
 
+    z <- reshape2::dcast(z, 
+    formula = LKUP ~ PARAMETER + UNITS, 
+    fun.aggregate=mean, na.rm=TRUE,
+    value.var= "VALUE")
+    
     
     #a is the biomass data for the virginia province
-    a <- read.csv(filepath[i+1], row.names= NULL)
+    a <- read.csv(filepath[i + 1], row.names= NULL)
   
     colnames(a) <- colnames(a)[-1]
   
@@ -113,9 +155,17 @@ library(plyr)
       replacement= NA, fixed= TRUE, x= a$VALUE))
     a$REGION <- "Virginia"
 
+    a <- a %>% dplyr::filter(LBL == "Macoma balthica") 
+
+    a <- reshape2::dcast(a, 
+      formula = REGION + YEARCODE + STATION + SAMPLE_NUMBER ~ PARAMETER + UNITS, 
+      fun.aggregate=mean, na.rm=TRUE,
+      value.var= "VALUE")
   
+    
+    
     ##b is the sediment characteristic data, virginia province
-    b <- read.csv(as.character(filepath[i+ 1 + gap.y]), row.names=NULL)
+    b <- read.csv(as.character(filepath[i + 1 + gap.y]), row.names=NULL)
 
     colnames(b) <- colnames(b)[-1]
 
@@ -129,36 +179,72 @@ library(plyr)
       replacement= NA, fixed= TRUE, x= b$VALUE))
     b$REGION <- "Virginia"
 
-
+    b <- reshape2::dcast(b, 
+    formula = LKUP ~ PARAMETER + UNITS, 
+    fun.aggregate=mean, na.rm=TRUE,
+    value.var= "VALUE")
+  
+    
+    
     ##c is the water quality data, virginia province
-    c <- read.csv(filepath[i+ 1 + gap.z], row.names= NULL)
+    c <- read.csv(filepath[i + 1 + gap.z], row.names= NULL)
+    
     colnames(c) <- colnames(c)[-1]
+    
     c <- c[-length(c)]
+    
     colnames(c)[length(c)] <- "SAMP_TYPE"
+    
     c$LKUP <- paste(c$STATION, c$YEARCODE, c$SAMPLE_NUMBER)
+    
     c$VALUE <- as.numeric(c$VALUE)
+    
     c$REGION <- "Virginia"
     
+    c <- reshape2::dcast(c, 
+    formula = LKUP ~ PARAMETER + UNITS, 
+    fun.aggregate=mean, na.rm=TRUE,
+    value.var= "VALUE")
 
     ##Joining abcdxyz using smartbind (requires 'gtools' package)
-    merge <- rbind.fill(x, a, y, b, z, c)
+    merge.m <- dplyr::left_join(x, y, by = LKUP)
+    merge.m <- dplyr::left_join(merge.m, z, by = LKUP)
 
-    v.m[[i]]<-merge
+    merge.v <- dplyr::left_join(a, b, by = LKUP)
+    merge.v <- dplyr::left_join(merge.v, c, by = LKUP)
+
+    merge <- plyr::rbind.fill(merge.m, merge.v)
+    
+    v.m[[i]] <- merge
     
   }
 
 
-##combine all years into single dataset  
-cbbmp<-do.call(rbind.fill,v.m)    
+  ##combine all years into single dataset  
+  cbbmp <- do.call(plyr::rbind.fill, v.m)    
   
-##option to save dataset for quick future reference    
-if(save)     {save(cbbmp,file = "cbbmp.Rdata")}
+  ##remove superfluous and inconsistently reported columns  
+  var.delete <- c("SAMPLE_DEPTH", "PARTITON", "STRATUM", "SITE", "SITE_TYPE", "TIME",
+    "STAEQ85","STAEQ89","NET_MESH","SOURCE")    
+    
+  var.filter <-names(cbbmp)[! (names(cbbmp) %in% var.delete)]
 
-    
-##optional return wd to original (if changed for purpose of saving files)  
-setwd(env)    
-    
-return(cbbmp)
+  cbbmp <- subset(x = cbbmp, select = var.filter)
+ 
+ 
   
+  ##option to save dataset for quick future reference    
+  if(save)     {
+    setwd(directory)
+    saveRDS(cbbmp, file= "cbbmp.Rdata")
+    unlink("cbbmp.Rdata")
+  }
+  setwd(directory)  
+  return(cbbmp)
 }
+
+getwd()
+
+T<-cbbmp.load(years=1995)
+
 
