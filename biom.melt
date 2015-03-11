@@ -27,12 +27,13 @@
 #' -quantiles (5th, 10th, 25th, 50th [median], 75th, 90th, and 95th percentiles)
 #' 
 #' In order to obtain summary statistics at different levels of the dataset, a vector of column names
-#' can be supplied in place of the ellipses `...`. For example, one could specify "REGION" and/or "YEAR",
+#' can be supplied in place of the ellipses `...`. For example, one could specify REGION and/or YEAR,
 #' which would return summary statistics within each region and/or year. If no variable is specified,
-#' all data are pooled and summarized solely by measurement parameter.
+#' all data are pooled and summarized solely by measurement parameter. Do not use quotes when referencing
+#' the column headers used to structure summary data.
 #' 
 #' 
-#' @return Creates data.frame or list of two data.frames (with dplyr attributes)
+#' @return Creates data.frame or list of two data.frames
 #' 
 #' @import magrittr, dplyr, reshape2
 #' 
@@ -46,7 +47,7 @@
 #' 
 #' ##creates table of statistics calculated within years; molten table not produced 
 #' 
-#' summarymelt <- biom.melt(cbbmp, table = FALSE, sums = TRUE, "YEARS")
+#' summarymelt <- biom.melt(cbbmp, table = FALSE, sums = TRUE, YEAR)
 #' 
 #' @export
 
@@ -70,18 +71,18 @@ biom.melt<- function(x, table = TRUE, sums = FALSE, ...) {
       
       b <- biom.melt %>% 
          group_by( ..., PARAMETER) %>%
-         dplyr::summarize(n = length(VALUE),
-                   min = min(VALUE),
-                   max = max(VALUE),
-                   mean = mean(VALUE),
-                   sd = sd(VALUE),
-                   p.05 = quantile(VALUE, probs = 0.05),
-                   p.10 = quantile(VALUE, probs = 0.1),
-                   p.25 = quantile(VALUE, probs = 0.25),
-                   p.50 = quantile(VALUE, probs = 0.5),
-                   p.75 = quantile(VALUE, probs = 0.75),
-                   p.90 = quantile(VALUE, probs = 0.90),
-                   p.95 = quantile(VALUE, probs = 0.95))
+     dplyr::summarize(n = length(VALUE[!(is.na(VALUE))]),
+               min = min(VALUE, na.rm = TRUE),
+               max = max(VALUE, na.rm = TRUE),
+               mean = mean(VALUE, na.rm = TRUE),
+               sd = sd(VALUE, na.rm = TRUE),
+               p.05 = quantile(VALUE, probs = 0.05, , na.rm = TRUE),
+               p.10 = quantile(VALUE, probs = 0.1, na.rm = TRUE),
+               p.25 = quantile(VALUE, probs = 0.25, na.rm = TRUE),
+               p.50 = quantile(VALUE, probs = 0.5, na.rm = TRUE),
+               p.75 = quantile(VALUE, probs = 0.75, na.rm = TRUE),
+               p.90 = quantile(VALUE, probs = 0.90, na.rm = TRUE),
+               p.95 = quantile(VALUE, probs = 0.95, na.rm = TRUE))
    
       return(b)
    }
@@ -95,20 +96,18 @@ biom.melt<- function(x, table = TRUE, sums = FALSE, ...) {
       
       biom.sum <- biom.melt %>% 
          group_by( ..., PARAMETER) %>%
-         dplyr::summarize(n = length(VALUE),
-                   min = min(VALUE),
-                   max = max(VALUE),
-                   mean = mean(VALUE),
-                   sd = sd(VALUE),
-                   p.05 = quantile(VALUE, probs = 0.05),
-                   p.10 = quantile(VALUE, probs = 0.1),
-                   p.25 = quantile(VALUE, probs = 0.25),
-                   p.50 = quantile(VALUE, probs = 0.5),
-                   p.75 = quantile(VALUE, probs = 0.75),
-                   p.90 = quantile(VALUE, probs = 0.90),
-                   p.95 = quantile(VALUE, probs = 0.95))
-      
-      
+         dplyr::summarize(n = length(VALUE[!(is.na(VALUE))]),
+               min = min(VALUE, na.rm = TRUE),
+               max = max(VALUE, na.rm = TRUE),
+               mean = mean(VALUE, na.rm = TRUE),
+               sd = sd(VALUE, na.rm = TRUE),
+               p.05 = quantile(VALUE, probs = 0.05, , na.rm = TRUE),
+               p.10 = quantile(VALUE, probs = 0.1, na.rm = TRUE),
+               p.25 = quantile(VALUE, probs = 0.25, na.rm = TRUE),
+               p.50 = quantile(VALUE, probs = 0.5, na.rm = TRUE),
+               p.75 = quantile(VALUE, probs = 0.75, na.rm = TRUE),
+               p.90 = quantile(VALUE, probs = 0.90, na.rm = TRUE),
+               p.95 = quantile(VALUE, probs = 0.95, na.rm = TRUE))
 
       melt.list[[1]] <- biom.melt
       melt.list[[2]] <- biom.sum
