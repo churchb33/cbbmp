@@ -1,0 +1,241 @@
+#' Download data from Chesapeake Bay Benthic Monitoring Program
+#' 
+#' This function takes a range of years (from 1995 through newest available year -- see URL below for
+#' currently available year) and returns a data.frame of biomass, sediment quality, and water quality
+#' parameters from both the Maryland and Virginia datasets from the range of years.
+#' 
+#'  
+#' @param years A vector of years of sampling data to download; minimum = 1995, maximum is updated annually, but current maximum = 2013
+#' @param maryland Logical option of whether or not to include Maryland dataset
+#' @param virginia Logical option of whether or not to include Virginia dataset
+#' @param path An alternative repository for data files downloaded by biom.DL; a new directory will be created to house files
+#' @param taxon The singular taxon of interest; biomass for this taxon alone will be compiled in data file; taxon reference will be the lowest level of taxonomic identification (e.g., species or genera)
+#' @param write Logical option to save .csv file of downloaded data for future reference; default setting will save a file called 'cbbmp.Rdata' to the specified file path or, by default, the working directory
+#' 
+#' @return Creates data.frame and/or .csv file
+#' 
+#' @import magrittr, plyr, dplyr, reshape2
+#' 
+#' @seealso \url{http://www.baybenthos.versar.com/data.htm}
+#' 
+#' @section Warning:
+#' It is strongly recommended that, if you do not set write=TRUE, that you create an R object from the output of the function.
+#' Running the function may create NAs due to coersion
+#' @examples
+#' 
+#' #to download single year (e.g., data posted after this package is created)
+#' cbbmp2013<- biom.DL(years = 2013, path = getwd())
+#' 
+#' #to download all years in current dataset without maryland data (for example)
+#' cbbmp<- biom.DL(years = 1995:2012, path = getwd(), virginia = TRUE, maryland = FALSE)
+#' 
+#' 
+#'  @export
+
+library(reshape2)
+library(magrittr)
+
+biom.DL<- function(years=1995:2012, maryland=TRUE, virginia=TRUE, path,
+  taxon = "Macoma balthica", write = FALSE) {
+
+  directory<- getwd()
+  
+  
+  newfolder<- paste0(path,"\\biom_data")
+  dir.create(path = newfolder)
+  setwd(newfolder)
+
+  
+  base.url <- "http://www.baybenthos.versar.com/SciData/CBPData"
+  table.ext <- c("bm.txt", "sed.txt", "wq.txt")
+    
+  if(maryland){
+
+    
+    year.url.MD <- paste0(base.url,years,"/mdbe",substr(years, start=3, stop=4),"_")
+        
+    full.MD <- c(paste0(year.url.MD, table.ext[[1]]),
+      paste0(year.url.MD, table.ext[[2]]),
+      paste0(year.url.MD, table.ext[[3]]))
+    
+      
+    filename.MD <- c(paste0("mdbe",substr(years, start=3, stop=4),"_",table.ext[[1]]),
+      paste0("mdbe",substr(years, start=3, stop=4),"_",table.ext[[2]]),
+      paste0("mdbe",substr(years, start=3, stop=4),"_",table.ext[[3]]))
+      
+  for (i in 1:length(full.MD)) {
+     download.file(full.MD[i], destfile = filename.MD[i], mode="wb")
+    }
+
+  }
+
+  if(virginia){
+ 
+    year.url.VA <- paste0(base.url,years,"/vabe",substr(years, start=3, stop=4),"_")
+    
+    full.VA <- c(paste0(year.url.VA, table.ext[[1]]),
+      paste0(year.url.VA, table.ext[[2]]),
+      paste0(year.url.VA, table.ext[[3]]))
+    
+    
+    filename.VA <- c(paste0("vabe",substr(years, start=3, stop=4),"_",table.ext[[1]]),
+      paste0("vabe",substr(years, start=3, stop=4),"_",table.ext[[2]]),
+      paste0("vabe",substr(years, start=3, stop=4),"_",table.ext[[3]]))
+
+    for (i in 1:length(full.MD)) {
+      download.file(full.VA[i], destfile = filename.VA[i], mode="wb")
+    }
+  }
+  
+  filelist <- list.files()
+    
+
+#################
+## i is year (indexes list and within group of 3)
+## bump is frame shift of 3 (next set of 3 files)
+
+
+options(stringsAsFactors=FALSE) 
+
+    list.x <- list()
+    
+    bump <- 0
+    i    <- 1
+    
+    while (bump < length(filelist)) {  ##x.list to filelist
+      
+  
+############################### benthic      
+      
+    x<- read.csv(file = filelist[1 + bump], header = FALSE)
+    colnames(x) <- x[1, ]
+    x<- x[2:nrow(x), ]
+    x$YEAR <- as.numeric(substr(x$SAMPLE_DATE, start = 1, stop = 4))
+      
+      
+    x$VALUE <- as.numeric(x$VALUE)
+
+    x<- x %>% filter(LBL == taxon)
+    
+      
+      
+    col.list.bm <- c("STATION", "CRUISENO",  "YEAR", "SAMPLE_NUMBER",
+      "PARAMETER", "VALUE", "UNITS")
+  
+    x<- x %>% select(match(col.list.bm, colnames(x)))
+    
+
+    x$REGION <- ifelse(substr(x = filelist[1 + bump], 
+      start =  1, stop = 4) == "mdbe",
+      "maryland", "virginia")
+
+    names(x)  
+      
+    
+    x$LKUP <- paste(x$STATION, x$CRUISENO, x$YEAR)
+  
+        
+    x.cast<- reshape2::dcast(data=x, 
+      formula=  STATION +  CRUISENO + 
+        YEAR + LKUP + REGION ~ PARAMETER + UNITS,
+      value.var = "VALUE", fun.aggregate = mean, na.rm = TRUE)
+    
+    names(x.cast)[names(x.cast)=="AFDW_GRAMS/SAMPLE"] <- "AFDW" 
+
+############################## sediment
+
+      
+    y<- read.csv(file = filelist[2 + bump], header = FALSE)
+    colnames(y) <- y[1,]
+    y<- y[2:nrow(y),]
+    y$YEAR <- as.numeric(substr(y$SAMPLE_DATE, start = 1, stop = 4))
+
+    y$VALUE <- as.numeric(y$VALUE)
+    
+      
+    col.list.sed <- c("STATION", "CRUISENO",  "YEAR", "SAMPLE_NUMBER",
+      "PARAMETER", "VALUE", "UNITS")
+    
+    y<- y %>% select(match(col.list.sed,colnames(y)))
+        
+    y$REGION <- ifelse(substr(x = filelist[2 + bump], 
+      start =  1, stop = 4) == "mdbe",
+      "maryland", "virginia")
+  
+    y$LKUP <- paste(y$STATION, y$CRUISENO, y$YEAR)
+    
+    y.cast<- reshape2::dcast(data = y,
+      formula = STATION + CRUISENO + YEAR + 
+      LKUP + REGION ~ PARAMETER + UNITS,
+      value.var = "VALUE")#, fun.aggregate = mean, na.rm = TRUE)
+        
+  
+  ################# water quality
+  
+      
+    z<- read.csv(file = filelist[3 + bump], header = FALSE)
+    colnames(z) <- z[1,]
+    z<- z[2:nrow(z),]
+    z$YEAR <- as.numeric(substr(z$SAMPLE_DATE, start = 1, stop = 4))
+    names(z)
+    z$VALUE <- as.numeric(z$VALUE)  
+    z$SAMPLE_DEPTH <- as.numeric(z$SAMPLE_DEPTH)
+      
+    col.list.wq <- c("STATION", "CRUISENO", "YEAR",
+      "PARAMETER", "VALUE", "UNITS", "SAMPLE_DEPTH")
+    
+    z<- z %>% select(match(col.list.wq,colnames(z)))
+        
+    z$REGION <- ifelse(substr(x = filelist[3 + bump], 
+      start =  1, stop = 4) == "mdbe",
+      "maryland", "virginia")
+  
+    z$LKUP <- paste(z$STATION, z$CRUISENO, z$YEAR)
+    
+    z.cast <- reshape2::dcast(data = z,
+      formula = STATION +  CRUISENO + YEAR +
+        SAMPLE_DEPTH + LKUP + REGION ~ 
+        PARAMETER + UNITS,
+        value.var = "VALUE", fun.aggregate = mean, na.rm = TRUE)
+    
+    ##only using the maximum depth measurement (most relevant for benthos)     
+    z.cast <- z.cast %>% group_by(LKUP) %>%
+      filter(SAMPLE_DEPTH == max(SAMPLE_DEPTH))
+    
+#update colnames      
+      
+    names(z.cast)[names(z.cast)=="CONDUCT_UMHO/CM"] <- "CONDUCT" 
+    names(z.cast)[names(z.cast)=="DO_PSAT_% SATURATION"] <- "DO_PSAT"
+    names(z.cast)[names(z.cast)=="WTEMP_DEG C"] <- "WTEMP_C"
+    names(z.cast)[names(z.cast)=="PH_pH"] <- "pH"
+    names(z.cast)[names(z.cast)=="SALINITY_PSU"| 
+        names(z.cast)=="SALINITY_PPT"] <- "SALINITY_PPT" 
+  
+
+
+##############Joining datasets
+          
+    merge <- dplyr::left_join(y.cast, z.cast)
+    merge2<- dplyr::left_join(merge, x.cast)
+
+    merge2$P.A<- ifelse(is.na(merge2$AFDW ),0,1) ##added presence/absence column
+      
+      
+    list.x[[i]] <- merge2
+    
+    bump <- bump + 3
+    i <- i + 1
+    }  ##end while loop
+  
+  merge3 <- do.call(what = "rbind.fill", args = list.x)
+  merge3 <- merge3 %>% select(-VOLORG_PERCENT) #not frequently reported
+
+  merge3$SILTCLAY_PERCENT[merge3$SILTCLAY_PERCENT > 100 & !(is.na(merge3$SILTCLAY_PERCENT))] <- 69.78
+  
+  setwd(directory)
+  if(write)  { write.csv(merge3, "cbbmp.csv") }  
+    
+  return(merge3)
+  
+
+}     ##end function
