@@ -1,0 +1,118 @@
+#' Melt cbbmp dataset and optional summarization table (or both!)
+#' 
+#' This function takes the default cbbmp database or any database build with
+#' the `biom.DL` function and melts it into a long-form data.frame.
+#' The long-form dataframe can be obtained directly so long as `table` = TRUE 
+#' (by giving it to a new object) or a summary table can be created by 
+#' setting the `sums` arg = TRUE, or, if both `sums` and `table` = TRUE, 
+#' returns a list with the molten data.frame AND the summary table.
+#'  
+#'  
+#' @param x biom.DL output data.frame; this includes the built-in dataset `cbbmp`
+#' @param table logical value indicating whether or not to produce a molten table
+#' @param sums logical value indicating whether or not to produce a summary table
+#' @param ... vector of variables (from data.frame supplied as `x` arg) to "split" by when calculating summary statistics in sums table.
+#' 
+#' @details
+#' If both `table` and `sums` are set as TRUE, then a list of length two is returned with the molten
+#' data.frame as the first item, and a summary of the molten data as the second item. If both 
+#' `table` and `sums` are set to false, an error will be returned.
+#' 
+#' The summary table returns the following statistics:
+#' -sample size (n)
+#' -minimum (min)
+#' -maximum (max)
+#' -mean
+#' -standard deviation (sd)
+#' -quantiles (5th, 10th, 25th, 50th [median], 75th, 90th, and 95th percentiles)
+#' 
+#' In order to obtain summary statistics at different levels of the dataset, a vector of column names
+#' can be supplied in place of the ellipses `...`. For example, one could specify "REGION" and/or "YEAR",
+#' which would return summary statistics within each region and/or year. If no variable is specified,
+#' all data are pooled and summarized solely by measurement parameter.
+#' 
+#' 
+#' @return Creates data.frame or list of two data.frames (with dplyr attributes)
+#' 
+#' @import magrittr, dplyr, reshape2
+#' 
+#' 
+#' @section Warning:
+#' Must set either table or sums equal to TRUE
+#' 
+#' 
+#' @examples
+#' 
+#' 
+#' ##creates table of statistics calculated within years; molten table not produced 
+#' 
+#' summarymelt <- biom.melt(cbbmp, table = FALSE, sums = TRUE, "YEARS")
+#' 
+#' @export
+
+biom.melt<- function(x, table = TRUE, sums = FALSE, ...) {
+   if(!sums & !table){ stop(print("either table or sums arg must be TRUE"))}
+   
+   
+  
+   biom.melt<- reshape2::melt(data = x, na.rm = TRUE, value.name = "VALUE", variable.name = "PARAMETER",
+                    id.vars = c("REGION", "YEAR", "CRUISENO", "STATION", "LKUP"))   
+  
+   
+   
+   if(table & !sums){ return(biom.melt)
+   }
+
+   
+   if(sums & !table){
+      options(digits = 3)
+   
+      
+      b <- biom.melt %>% 
+         group_by( ..., PARAMETER) %>%
+         dplyr::summarize(n = length(VALUE),
+                   min = min(VALUE),
+                   max = max(VALUE),
+                   mean = mean(VALUE),
+                   sd = sd(VALUE),
+                   p.05 = quantile(VALUE, probs = 0.05),
+                   p.10 = quantile(VALUE, probs = 0.1),
+                   p.25 = quantile(VALUE, probs = 0.25),
+                   p.50 = quantile(VALUE, probs = 0.5),
+                   p.75 = quantile(VALUE, probs = 0.75),
+                   p.90 = quantile(VALUE, probs = 0.90),
+                   p.95 = quantile(VALUE, probs = 0.95))
+   
+      return(b)
+   }
+   
+   
+   if(sums & table) {
+      melt.list <- list()
+      options(digits = 3)
+      
+      
+      
+      biom.sum <- biom.melt %>% 
+         group_by( ..., PARAMETER) %>%
+         dplyr::summarize(n = length(VALUE),
+                   min = min(VALUE),
+                   max = max(VALUE),
+                   mean = mean(VALUE),
+                   sd = sd(VALUE),
+                   p.05 = quantile(VALUE, probs = 0.05),
+                   p.10 = quantile(VALUE, probs = 0.1),
+                   p.25 = quantile(VALUE, probs = 0.25),
+                   p.50 = quantile(VALUE, probs = 0.5),
+                   p.75 = quantile(VALUE, probs = 0.75),
+                   p.90 = quantile(VALUE, probs = 0.90),
+                   p.95 = quantile(VALUE, probs = 0.95))
+      
+      
+
+      melt.list[[1]] <- biom.melt
+      melt.list[[2]] <- biom.sum
+         
+      return(melt.list)
+   }
+}  ##end function
