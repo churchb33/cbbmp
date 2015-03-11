@@ -32,9 +32,6 @@
 #' 
 #'  @export
 
-library(reshape2)
-library(magrittr)
-
 biom.DL<- function(years=1995:2012, maryland=TRUE, virginia=TRUE, path,
   taxon = "Macoma balthica", write = FALSE) {
 
