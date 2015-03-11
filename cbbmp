@@ -1,0 +1,33 @@
+#' CBBMP data, 1995 to 2012: Macoma balthica biomass and habitat characteristics
+#'
+#' A data containing biomass, sediment quality, and water quality parameters from Chesapeake Bay Benthic Monitoring Program
+#'
+#' \itemize{
+#'   \item STATION Sampling Station
+#'   \item CRUISENO Sampling Cruise Number (1= Summer, 2= Spring)
+#'   \item YEAR Sampling Year (format= 'YYYY')
+#'   \item LKUP Unique sample code generated as paste(STATION, YEARCODE, SAMPLE_NUMBER)
+#'   \item REGION Sampling region (Maryland or Virginia)
+#'   \item MOIST_PERCENT percent moisture of sediment lost upon ignition (by mass)
+#'   \item SAND_PERCENT percent of sediment as sand (by mass)
+#'   \item SILTCLAY_PERCENT percent of sediment as fine particles (by mass) 
+#'   \item TC_PERCENT percent of sediment as carbon (by mass)
+#'   \item TIC_PERCENT percent of sediment as inorganic carbon (by mass)
+#'   \item TN_PERCENT percent of sediment as nitrogen (by mass)
+#'   \item TOC_PERCENT percent of sediment as organic carbon (by mass)
+#'   \item CONDUCT conductivity
+#'   \item DO_PPM dissolved oxygen (mg/L)
+#'   \item DO_PSAT dissolved oxygen (% of saturation)
+#'   \item pH pH
+#'   \item SALINITY_PPT salinity (ppt)
+#'   \item WTEMP water temperature (celsius)
+#'   \item AFDW ash-free dry weight biomass in grams per sample; default biomass data is for Macoma balthica (Baltic tellin clam)
+#'   \item P.A Binary value indicating the presence of the taxon (default taxon is Macoma balthica)
+#'  }
+#'
+#' @format (5,754 obs. of 21 variables)
+#' @source \url{http://www.baybenthos.versar.com/data.htm}
+#' @name cbbmp
+#' @docType data
+NULL
+
