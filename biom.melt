@@ -35,19 +35,9 @@
 #' 
 #' @return Creates data.frame or list of two data.frames
 #' 
-#' @import magrittr, dplyr, reshape2
-#' 
-#' 
 #' @section Warning:
 #' Must set either table or sums equal to TRUE
 #' 
-#' 
-#' @examples
-#' 
-#' 
-#' ##creates table of statistics calculated within years; molten table not produced 
-#' 
-#' summarymelt <- biom.melt(cbbmp, table = FALSE, sums = TRUE, YEAR)
 #' 
 #' @export
 
