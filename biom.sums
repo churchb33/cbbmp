@@ -25,22 +25,6 @@
 #' 
 #' @return Creates data.frame
 #' 
-#' @import magrittr, dplyr
-#' 
-#' @examples
-#' 
-#' ##creates table of statistics calculated within years; molten table not produced 
-#' 
-#' 
-#' # create molten data.frame from biom.DL output (e.g., `cbbmp` dataset)
-#'  melty <- biom.melt(cbbmp, table = TRUE, sums = FALSE)
-#' 
-#' # then input molten frame into function with any additional parameters by which to 
-#' # group summary stat calculation.
-#' summarymelt<- biom.sums(melty, YEAR)
-#' 
-#' Note that summary data are arbitrarily rounded to 3 digits in most cases; these do not represent significant figures
-#' 
 #' @section Warnings:
 #' This function calls specific headings from biom.DL dataset (e.g., `cbbmp` dataset), so it
 #' is unlikely to work with other molten data.frames. If you would like to use this function with other
@@ -49,9 +33,6 @@
 #' 
 #' 
 #' @export
-#' 
-
-
 biom.sums<- function(x.melt, ...) {   
    
    options(digits = 3)
