@@ -22,10 +22,9 @@
 #'   \item SALINITY_PPT salinity (ppt)
 #'   \item WTEMP water temperature (celsius)
 #'   \item AFDW ash-free dry weight biomass in grams per sample; default biomass data is for Macoma balthica (Baltic tellin clam)
-#'   \item P.A Binary value indicating the presence of the taxon (default taxon is Macoma balthica)
 #'  }
 #'
-#' @format (5,754 obs. of 21 variables)
+#' @format (5,754 obs. of 20 variables)
 #' @source \url{http://www.baybenthos.versar.com/data.htm}
 #' @name cbbmp
 #' @docType data
