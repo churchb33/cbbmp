@@ -1,0 +1,161 @@
+#' Scatterplot matrix of biomass dataset variables
+#' 
+#'  
+#' This function creates a scatterplot matrix of values from the biom.DL output
+#' data.frames (e.g., the cbbmp dataset). The purpose of the matrix is to show obvious
+#' correlations between variables in the dataset, distributions of single variables
+#' (provided as histograms on the diagonal), and the option to color scatterplots by
+#' with factor levels variables (e.g., "REGION").
+#'  
+#'  
+#' @param x biom.DL output data.frame; this includes the built-in dataset `cbbmp`
+#' @param params vector of column names from biom.DL output (e.g., cbbmp dataset) to include in plot matrix
+#' @param group.var logical argument indicating whether or not there will be a factor by which to color points
+#' @param g factor variable from biom.DL output used to color points in plot matrix
+#' @param export logical function indicating whether or not to produce png file of matrix
+#' @param filename quoted name of matrix plot to be saved in working directory
+#' @param ... optional arguments supplied to histograms shown on diagonal.
+#' 
+#' @details
+#' 
+#' The params arg must be at least 2 arguments in length. A sample of potentially important variables
+#' is provided as the default (See usage section).
+#' 
+#' The g argument must be assigned to a column of the biom.DL-type data.frame when 
+#' group.var = TRUE. Otherwise, g is not called by the function and will be ignored.
+#' 
+#' Currently the variable provided to g does not 
+#' 
+#' This is a specialized version of the `pairs` function from the {graphics} package.
+#' 
+#' @return Creates matrix of plots
+#' 
+#' @examples
+#' 
+#'  \dontrun{
+#'  
+#'  biom.pairs(cbbmp, params = c("SAND_PERCENT", "SALINITY_PPT", "SILTCLAY_PERCENT", "AFDW"), 
+#'  group.var= TRUE, g= "REGION")
+#' }
+#' 
+#' @export
+
+
+biom.pairs<- function(x, params = c("SILTCLAY_PERCENT", 
+  "SAND_PERCENT", "TN_PERCENT", "TOC_PERCENT", 
+  "CONDUCT", "DO_PPM", "pH", "SALINITY_PPT", "WTEMP_C", "AFDW"), 
+                      group.var = FALSE, g = "n", export = TRUE, filename, ...) {
+  
+  
+  
+  param.list<- params
+  c2 <- select_(x, .dots = param.list)
+  par(bg = "floralwhite")
+  
+  ##add histograms to diagonal of matrix
+  panel.hist <- function(x, ...) {
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(usr[1:2], 0, 1.5) )
+    h <- hist(x, plot = FALSE)
+    breaks <- h$breaks; nB <- length(breaks)
+    y <- h$counts; y <- y/max(y)
+    rect(breaks[-nB], 0, breaks[-1], y, 
+      border = "1", density = 0,
+      ...)
+  }
+  
+  if(export){
+    plot.new()
+    
+    file <- paste0(getwd(),"\\", filename, ".png")
+    
+    png(filename = file, width = 2000, height = 1200)
+     
+     if(group.var){
+    
+        g.val <- g
+        
+       if(g.val == "n") {
+          stop( print( "no group variable supplied to arg `g`" ))
+       }
+
+       groups<- as.factor(x[ , g])
+   
+       col.fun <- function(f) {
+       
+          levs <- length(levels(as.factor(f)))
+             
+          col.list <- rainbow(n = levs,  alpha = 0.15)
+             
+          return(col.list[1:levs])
+       }
+       
+       
+       pairs(c2, pch = 19, col = col.fun(f = groups),
+           diag.panel = panel.hist, oma = c(8, 4, 4, 4))
+       
+       legend("bottom", legend = as.vector(levels(as.factor(groups))),
+         cex = 0.8, pt.cex = 0.8, horiz = TRUE,
+         pch = rep(x = 19, n = length(levels(as.factor(groups)))),
+         col = unique(col.fun(f = as.factor(groups))),
+         xpd = NA)
+     
+       
+     }             
+   
+     
+     if(!group.var){
+   
+        
+        
+     pairs(c2, pch = 19, col = rgb(0,0,0,0.1),
+           diag.panel = panel.hist)
+     }
+      
+    dev.off()
+    
+  }
+  
+  if(!export) {
+    
+      if(group.var){
+      
+      g.val <- g
+      
+      if(g.val == "n") {stop( 
+        print("no group variable supplied to arg `g`"))
+      }
+      
+      
+      groups<- as.factor(x[ , g])
+  
+      col.fun = function(f, alpha) {
+            levs<- length(levels(as.factor(f)))
+            col.list<-topo.colors(n = levs,  alpha = alpha)
+            return(col.list[1:levs])}
+      
+      
+      pairs(c2, pch = 19, col = col.fun(f = groups, alpha = 0.2),
+        diag.panel = panel.hist, 
+        oma = c(ifelse(length(levels(as.factor(groups))) > 8, 10, 8), 4, 4, 4)) 
+      
+      legend("bottom", legend = as.vector(levels(as.factor(groups))),
+        pch = rep(x = 19, n = length(levels(as.factor(groups)))),
+        col = unique(col.fun(f = as.factor(groups), alpha = 1)),
+        xpd = NA, inset = -0.01 * length(params), cex = 0.8,
+        ncol = ifelse(length(levels(as.factor(groups))) > 8, 
+                      length(levels(as.factor(groups)))/2, 
+                      length(levels(as.factor(groups)))))
+       
+      }             
+     
+       
+       if(!group.var){
+     
+       pairs(c2, pch = 19, col = rgb(0,0,0,0.1),
+             diag.panel = panel.hist)
+      }
+  }
+
+  
+}
