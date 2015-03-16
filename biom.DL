@@ -14,34 +14,28 @@
 #' 
 #' @return Creates data.frame and/or .csv file
 #' 
-#' @import magrittr, plyr, dplyr, reshape2
-#' 
 #' @seealso \url{http://www.baybenthos.versar.com/data.htm}
 #' 
 #' @section Warning:
-#' It is strongly recommended that, if you do not set write=TRUE, that you create an R object from the output of the function.
-#' Running the function may create NAs due to coersion
-#' @examples
+#' It is strongly recommended that, if you do not set write=TRUE,
+#' that you create an R object from the output of the function.
+#' Running the function will create NAs due to coersion, as not all variables 
+#' are measured during all years or in both regions.
 #' 
-#' #to download single year (e.g., data posted after this package is created)
-#' cbbmp2013<- biom.DL(years = 2013, path = getwd())
-#' 
-#' #to download all years in current dataset without maryland data (for example)
-#' cbbmp<- biom.DL(years = 1995:2012, path = getwd(), virginia = TRUE, maryland = FALSE)
-#' 
-#' 
+#' **IMPORTANT!**
+#' It is important that if biom.DL is run successive times, that a new file path
+#' be specified each time, or alternatively delete all the files downloaded between
+#' each run of the function. Otherwise, the indexing used in the function will
+#' not work properly and the data.frame created by biom.DL in successive
+#' runs will be inaccurate.
 #'  @export
+
 
 biom.DL<- function(years=1995:2012, maryland=TRUE, virginia=TRUE, path,
   taxon = "Macoma balthica", write = FALSE) {
 
-  directory<- getwd()
+  directory <- getwd()
   
-  
-  newfolder<- paste0(path,"\\biom_data")
-  dir.create(path = newfolder)
-  setwd(newfolder)
-
   
   base.url <- "http://www.baybenthos.versar.com/SciData/CBPData"
   table.ext <- c("bm.txt", "sed.txt", "wq.txt")
@@ -59,8 +53,16 @@ biom.DL<- function(years=1995:2012, maryland=TRUE, virginia=TRUE, path,
     filename.MD <- c(paste0("mdbe",substr(years, start=3, stop=4),"_",table.ext[[1]]),
       paste0("mdbe",substr(years, start=3, stop=4),"_",table.ext[[2]]),
       paste0("mdbe",substr(years, start=3, stop=4),"_",table.ext[[3]]))
-      
+
+    
+    #creating new subdirectory biomass datafiles
+    newfolder <- paste0(path,"\\biom_data")
+    dir.create(path = newfolder)
+    setwd(newfolder)
+    
   for (i in 1:length(full.MD)) {
+
+     
      download.file(full.MD[i], destfile = filename.MD[i], mode="wb")
     }
 
@@ -112,14 +114,14 @@ options(stringsAsFactors=FALSE)
       
     x$VALUE <- as.numeric(x$VALUE)
 
-    x<- x %>% filter(LBL == taxon)
+    x <- x %>% filter(LBL == taxon)
     
       
       
-    col.list.bm <- c("STATION", "CRUISENO",  "YEAR", "SAMPLE_NUMBER",
+    col.list.bm <- c("STATION", "CRUISENO", "YEAR", "SAMPLE_NUMBER",
       "PARAMETER", "VALUE", "UNITS")
   
-    x<- x %>% select(match(col.list.bm, colnames(x)))
+    x <- x %>% dplyr::select(match(col.list.bm, colnames(x)))
     
 
     x$REGION <- ifelse(substr(x = filelist[1 + bump], 
@@ -153,7 +155,7 @@ options(stringsAsFactors=FALSE)
     col.list.sed <- c("STATION", "CRUISENO",  "YEAR", "SAMPLE_NUMBER",
       "PARAMETER", "VALUE", "UNITS")
     
-    y<- y %>% select(match(col.list.sed,colnames(y)))
+    y<- y %>% dplyr::select(match(col.list.sed,colnames(y)))
         
     y$REGION <- ifelse(substr(x = filelist[2 + bump], 
       start =  1, stop = 4) == "mdbe",
@@ -181,7 +183,7 @@ options(stringsAsFactors=FALSE)
     col.list.wq <- c("STATION", "CRUISENO", "YEAR",
       "PARAMETER", "VALUE", "UNITS", "SAMPLE_DEPTH")
     
-    z<- z %>% select(match(col.list.wq,colnames(z)))
+    z<- z %>% dplyr::select(match(col.list.wq,colnames(z)))
         
     z$REGION <- ifelse(substr(x = filelist[3 + bump], 
       start =  1, stop = 4) == "mdbe",
@@ -215,8 +217,6 @@ options(stringsAsFactors=FALSE)
     merge <- dplyr::left_join(y.cast, z.cast)
     merge2<- dplyr::left_join(merge, x.cast)
 
-    merge2$P.A<- ifelse(is.na(merge2$AFDW ),0,1) ##added presence/absence column
-      
       
     list.x[[i]] <- merge2
     
@@ -225,9 +225,14 @@ options(stringsAsFactors=FALSE)
     }  ##end while loop
   
   merge3 <- do.call(what = "rbind.fill", args = list.x)
-  merge3 <- merge3 %>% select(-VOLORG_PERCENT) #not frequently reported
+  merge3 <- merge3 %>% dplyr::select(-VOLORG_PERCENT) #not frequently reported
 
-  merge3$SILTCLAY_PERCENT[merge3$SILTCLAY_PERCENT > 100 & !(is.na(merge3$SILTCLAY_PERCENT))] <- 69.78
+  merge3$SILTCLAY_PERCENT[merge3$SILTCLAY_PERCENT > 
+      100 & !(is.na(merge3$SILTCLAY_PERCENT))] <- 69.78 #assuming that 69378% is a bad keystroke (3 = '.')
+   
+  merge3$TOC_PERCENT[merge3$TOC_PERCENT < 0] <- NA ##remove NEGATIVE %s
+  
+  merge3$WTEMP_C[merge3$WTEMP_C > 34] <- NA ##remove extreme values - error in input
   
   setwd(directory)
   if(write)  { write.csv(merge3, "cbbmp.csv") }  
