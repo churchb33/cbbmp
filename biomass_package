@@ -1,0 +1,22 @@
+#' biomass.
+#'
+#'
+#' This is a package that I built for STATR201, a class at the University of Washington
+#'
+#' Hi, Gregor!
+#' 
+#' 
+#' The purpose of the package is to provide biomass data for species taxa (Baltic tellin clam 
+#' by default) and some paired water quality and sediment parameters. Also, the package
+#' provides functions for downloading new biomass data for specific species, years, etc.,
+#' as well as tools for graphing and statistical analysis.
+#'  
+#' 
+#' The data was collected as part of the Chesapeake Bay Benthic Monitoring Program
+#' in Maryland and Virginia starting in 1995. Data is available through 2013 currently,
+#' although the default dataset associated with the biomass package is from 1995 to 2012.
+#' 
+#'
+#' @name biomass
+#' @docType package
+NULL
