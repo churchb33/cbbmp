@@ -1,0 +1,82 @@
+#' Boxplots of CBBMP data
+#' 
+#' The purpose of this function is to take data created using `biom.DL` 
+#' (e.g., `cbbmp`) and produce boxplots for evaluating distributions,
+#' comparing various categorical variables, and identifying potential outliers.
+#'  
+#' @param x data.frame created by biom.DL or similar (e.g., cbbmp dataset)
+#' @param params character vector of parameters from x (quoted) to show as boxplots
+#' @param group.var logical value, whether to include a category for filling plots
+#' @param g character vector of length 1 used for filling plots
+#' @param trans optional value for transforming y axes of boxplots
+#' 
+#' 
+#' @details
+#' 
+#' This function creates a ggplot2 graphic object which can be amended using 
+#' ggplot2 themes, etc. to overwrite prescribed graphics.
+#' 
+#' This function calls biom.melt, filters by the params argument, and then facets
+#' by the params.
+#' 
+#' g must only be specified if group.var is set as TRUE 
+#' 
+#' @return ggplot2 object (boxplots)
+#' 
+#' @examples
+#' \dontrun{
+#' biom.boxes(x = cbbmp,
+#'   params = c("AFDW", "CONDUCT", "TOC_PERCENT", "TIC_PERCENT"))+
+#'   scale_y_continuous(trans = "log10")
+#' }
+#' 
+#' @export
+
+biom.boxes <- function(x = cbbmp, params, 
+                       group.var = FALSE, trans = "identity", g) {
+
+   
+   param.list <- params
+   
+   box.melt <- biom.melt(x = x, table = TRUE, sums = FALSE)
+   
+   melt.filter <- box.melt %>% filter(PARAMETER %in% param.list)
+   
+   
+   if(group.var){   
+   
+      gg <- ggplot(melt.filter, 
+                   aes_string(x = g, y = quote(VALUE), fill = g)) +
+         geom_boxplot(varwidth = TRUE, 
+                      outlier.colour = "red") +
+         facet_wrap(~PARAMETER, scales = "free") +
+         labs(x = "",
+              y = "Value")+
+         theme_bw()+
+         theme(axis.text.x = element_blank(),
+               strip.background = element_rect(fill = "skyblue")) +
+         scale_y_continuous(trans = trans) +
+         scale_fill_discrete(name = g)
+   
+      return(gg)
+                                 
+   }
+   
+   if(!group.var){
+      
+      gg <- ggplot(melt.filter, aes(x = PARAMETER, 
+                                    y = VALUE)) +
+         geom_boxplot(varwidth = TRUE, fill = "skyblue2", alpha = 0.8, 
+                      outlier.colour = "red") +
+         facet_wrap(~PARAMETER, scales = "free") +
+         labs(x = "",
+              y = "Value")+
+         theme_bw()+
+         theme(axis.text.x = element_blank(),
+               strip.background = element_rect(fill = "skyblue")) +
+         scale_y_continuous(trans = trans)      
+      
+      return(gg)   
+      
+   }
+}
